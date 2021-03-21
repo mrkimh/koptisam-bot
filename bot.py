@@ -4,7 +4,6 @@ from telebot import types
 from string import Template
 
 bot = telebot.TeleBot(config.token)
-
 user_dict = {}
 
 
@@ -12,22 +11,20 @@ class User:
     def __init__(self, size):
         self.city = size
 
-        keys = ['fullname', 'phone', 'driverSeria',
-                'driverNumber', 'driverDate', 'car',
-                'carModel']
+        keys = ['fullname', 'phone', 'driverSeria', 'driverNumber', 'driverDate', 'car', 'carModel']
 
         for key in keys:
             self.key = None
 
 
 def error_message(message):
-    bot.reply_to(message, 'Ой, какая-то ошибка. Если ничего не происходит попробуйте меня перезапустить.')
+    bot.reply_to(message, config.exception_message)
     bot.send_message(message.chat.id, '/start')
 
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    # markup = types.InlineKeyboardMarkup()  # наша клавиатура
+    # markup = types.InlineKeyboardMarkup()
     # key_yes = types.InlineKeyboardButton(text='Да', callback_data='yes')
     # key_no = types.InlineKeyboardButton(text='Нет', callback_data='no')
     # markup.add(key_yes, key_no)
@@ -38,9 +35,7 @@ def send_welcome(message):
     contacts_btn = types.KeyboardButton(config.button_contact)
     markup.add(order_btn, info_btn, contacts_btn)
 
-    bot.send_message(message.chat.id, "Здравствуйте, " + message.from_user.first_name
-                     + ". Я - бот по приему заявок с сайта https://koptisam.com.ua, чтобы вы хотели сделать?",
-                     reply_markup=markup)
+    bot.send_message(message.chat.id, config.welcome_message, reply_markup=markup)
 
 
 # бот отвечает на текстовые сообщения и кнопки types.KeyboardButton
@@ -49,11 +44,11 @@ def send_text(message):
     if message.text == config.button_order:
         order_step(message)
     elif message.text == config.button_more:
-        bot.send_message(message.chat.id, "Мы изготавливаем коптильни из нержавеющей стали толщиной 1,5 мм...")
+        bot.send_message(message.chat.id, config.description_message)
     elif message.text == config.button_contact:
-        bot.send_message(message.chat.id, "Телефон: 097-435-11-77 Дмитрий")
+        bot.send_message(message.chat.id, config.contacts_message)
     else:
-        bot.send_message(message.chat.id, "Не знаю что сказать...")
+        bot.send_message(message.chat.id, config.dont_know_message)
 
 
 # бот отвечает на инлайн кнопки types.InlineKeyboardButton
@@ -75,12 +70,7 @@ def order_step(message):
     markup.add(small_btn, small_btn_thermo)
     markup.add(big_btn, big_btn_thermo)
 # TODO сделать выбор кол-ва для заказа
-    msg = bot.send_message(message.chat.id, 'Какую хотите заказать?\n'
-                                            'Пакет щепы в подарок к каждой коптильне.\n'
-                                            '- Маленькая (внутренний размер 400х200х200 мм, наружный - 450х240х290 мм)\n'
-                                            '- Большая (внутренний размер 450х250х250 мм, наружный - 500х300х340 мм)\n'
-                                            'Также, можем установить термометр в любую коптильню.',
-                           reply_markup=markup)
+    msg = bot.send_message(message.chat.id, config.choose_goods_message, reply_markup=markup)
     bot.register_next_step_handler(msg, process_size_step)
 
 
@@ -92,7 +82,7 @@ def process_size_step(message):
         # удалить старую клавиатуру
         markup = types.ReplyKeyboardRemove(selective=False)
 
-        msg = bot.send_message(chat_id, 'Для оформления заказа напишите Ваши: фамилию, имя, отчество', reply_markup=markup)
+        msg = bot.send_message(chat_id, config.full_name_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_fullname_step)
     except Exception:
         error_message(message)
@@ -108,8 +98,7 @@ def process_fullname_step(message):
         button_phone = types.KeyboardButton(text="Отправить номер телефона", request_contact=True)
         markup.add(button_phone)
 
-        msg = bot.send_message(chat_id, 'Ваш номер телефона?\n'
-                                        'Нажмите на кнопку ниже или введите его (только цифры)', reply_markup=markup)
+        msg = bot.send_message(chat_id, config.phone_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_phone_step)
     except Exception:
         error_message(message)
@@ -126,7 +115,7 @@ def process_phone_step(message):
             # если телефон передали сообщением
             user.phone = message.text
 
-        msg = bot.send_message(chat_id, 'Введите город и область доставки')
+        msg = bot.send_message(chat_id, config.city_message)
         bot.register_next_step_handler(msg, process_city_step)
     except Exception:
         error_message(message)
@@ -142,7 +131,7 @@ def process_city_step(message):
         for item in config.delivery_company:
             markup.add(types.KeyboardButton(item))
 
-        msg = bot.send_message(chat_id, 'Какой службой доставки отправить?', reply_markup=markup)
+        msg = bot.send_message(chat_id, config.choose_delivery_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_delivery_company_step)
     except Exception:
         error_message(message)
@@ -157,7 +146,7 @@ def process_delivery_company_step(message):
         # удалить старую клавиатуру
         types.ReplyKeyboardRemove(selective=False)
 
-        msg = bot.send_message(chat_id, 'Введите номер отделения службы доставки или адрес')
+        msg = bot.send_message(chat_id, config.warehouse_number_message)
         bot.register_next_step_handler(msg, process_warehouse_step)
     except Exception:
         error_message(message)
@@ -174,7 +163,7 @@ def process_warehouse_step(message):
         prepaid_btn = types.KeyboardButton('Предоплата на карту')
         markup.add(nalozhka_btn, prepaid_btn)
 
-        msg = bot.send_message(chat_id, 'Как хотите оплатить?', reply_markup=markup)
+        msg = bot.send_message(chat_id, config.payment_method_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_payment_step)
     except Exception:
         error_message(message)
@@ -189,7 +178,7 @@ def process_payment_step(message):
         # удалить старую клавиатуру
         types.ReplyKeyboardRemove(selective=False)
 
-        msg = bot.send_message(chat_id, 'Есть еще какие-либо пожелания?')
+        msg = bot.send_message(chat_id, config.comment_order_message)
         bot.register_next_step_handler(msg, process_comment_step)
     except Exception:
         error_message(message)
@@ -201,7 +190,7 @@ def process_comment_step(message):
         user = user_dict[chat_id]
         user.carModel = message.text
 
-        bot.send_message(chat_id, 'Спасибо, заявка создана! Скоро мы с Вами обязательно свяжемся.')
+        bot.send_message(chat_id, config.thanks_message)
         bot.send_message(chat_id, getRegData(user, 'Ваша заявка', message.from_user.first_name), parse_mode="Markdown")
         # отправить дубль в группу
         # bot.send_message(config.forward_chat_id, getRegData(user, 'Заявка от бота', bot.get_me().username), parse_mode="Markdown")
@@ -233,7 +222,7 @@ def getRegData(user, title, name):
 # если прислали произвольное фото
 @bot.message_handler(content_types=["photo"])
 def send_help_text(message):
-    bot.send_message(message.chat.id, 'Я не понимаю фото, напишите текст')
+    bot.send_message(message.chat.id, config.error_image_message)
 
 
 # Enable saving next step handlers to file "./.handlers-saves/step.save".
