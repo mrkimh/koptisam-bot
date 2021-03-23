@@ -1,20 +1,11 @@
 import config
 import telebot
 from telebot import types
-from string import Template
+from collections import defaultdict
 
 bot = telebot.TeleBot(config.token)
-user_dict = {}
-
-
-class User:
-    def __init__(self, size):
-        self.city = size
-
-        keys = ['fullname', 'phone', 'driverSeria', 'driverNumber', 'driverDate', 'car', 'carModel']
-
-        for key in keys:
-            self.key = None
+_default_data = lambda: defaultdict(_default_data)
+user_dict = _default_data()
 
 
 def error_message(message):
@@ -69,15 +60,15 @@ def order_step(message):
     big_btn_thermo = types.KeyboardButton(f'Большая с термометром - {config.big_price_thermo} грн')
     markup.add(small_btn, small_btn_thermo)
     markup.add(big_btn, big_btn_thermo)
-# TODO сделать выбор кол-ва для заказа
+
     msg = bot.send_message(message.chat.id, config.choose_goods_message, reply_markup=markup)
-    bot.register_next_step_handler(msg, process_size_step)
+    bot.register_next_step_handler(msg, process_product_step)
 
 
-def process_size_step(message):
+def process_product_step(message):
     try:
         chat_id = message.chat.id
-        user_dict[chat_id] = User(message.text)
+        user_dict[chat_id]['Товар'] = message.text
 
         # удалить старую клавиатуру
         markup = types.ReplyKeyboardRemove(selective=False)
@@ -91,8 +82,7 @@ def process_size_step(message):
 def process_fullname_step(message):
     try:
         chat_id = message.chat.id
-        user = user_dict[chat_id]
-        user.fullname = message.text
+        user_dict[chat_id]['ФИО'] = message.text
 
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
         button_phone = types.KeyboardButton(text="Отправить номер телефона", request_contact=True)
@@ -107,13 +97,13 @@ def process_fullname_step(message):
 def process_phone_step(message):
     try:
         chat_id = message.chat.id
-        user = user_dict[chat_id]
+
         try:
             # если телефон передали кнопкой
-            user.phone = message.contact.phone_number
+            user_dict[chat_id]['Телефон'] = message.contact.phone_number
         except AttributeError:
             # если телефон передали сообщением
-            user.phone = message.text
+            user_dict[chat_id]['Телефон'] = message.text
 
         msg = bot.send_message(chat_id, config.city_message)
         bot.register_next_step_handler(msg, process_city_step)
@@ -124,8 +114,7 @@ def process_phone_step(message):
 def process_city_step(message):
     try:
         chat_id = message.chat.id
-        user = user_dict[chat_id]
-        user.driverNumber = message.text
+        user_dict[chat_id]['Город, область'] = message.text
 
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
         for item in config.delivery_company:
@@ -140,8 +129,7 @@ def process_city_step(message):
 def process_delivery_company_step(message):
     try:
         chat_id = message.chat.id
-        user = user_dict[chat_id]
-        user.driverSeria = message.text
+        user_dict[chat_id]['Перевозчик'] = message.text
 
         # удалить старую клавиатуру
         types.ReplyKeyboardRemove(selective=False)
@@ -155,8 +143,7 @@ def process_delivery_company_step(message):
 def process_warehouse_step(message):
     try:
         chat_id = message.chat.id
-        user = user_dict[chat_id]
-        user.driverDate = message.text
+        user_dict[chat_id]['Отделение'] = message.text
 
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
         nalozhka_btn = types.KeyboardButton('Наложенный платеж')
@@ -172,8 +159,7 @@ def process_warehouse_step(message):
 def process_payment_step(message):
     try:
         chat_id = message.chat.id
-        user = user_dict[chat_id]
-        user.car = message.text
+        user_dict[chat_id]['Оплата'] = message.text
 
         # удалить старую клавиатуру
         types.ReplyKeyboardRemove(selective=False)
@@ -187,36 +173,27 @@ def process_payment_step(message):
 def process_comment_step(message):
     try:
         chat_id = message.chat.id
-        user = user_dict[chat_id]
-        user.carModel = message.text
+        user_dict[chat_id]['Комментарий'] = message.text
+
+        # удалить старую клавиатуру
+        types.ReplyKeyboardRemove(selective=False)
 
         bot.send_message(chat_id, config.thanks_message)
-        bot.send_message(chat_id, getRegData(user, 'Ваша заявка', message.from_user.first_name), parse_mode="Markdown")
+        bot.send_message(chat_id, get_reg_data(chat_id, 'Ваша заявка', message.from_user.first_name))
         # отправить дубль в группу
-        # bot.send_message(config.forward_chat_id, getRegData(user, 'Заявка от бота', bot.get_me().username), parse_mode="Markdown")
+        bot.send_message(config.forward_chat_id, get_reg_data(chat_id, 'Заявка от бота', bot.get_me().username))
     except Exception:
         error_message(message)
 
 
-# формирует вид заявки регистрации
-# нельзя делать перенос строки Template
-# в send_message должно стоять parse_mode="Markdown"
-def getRegData(user, title, name):
-    t = Template(
-        '$title *$name* \n Размер: *$userCity* \n ФИО: *$fullname* \n Телефон: *$phone* \n Доставка: *$driverSeria* \n Город, область: *$driverNumber* \n Отделение: *$driverDate* \n Оплата: *$car* \n Комментарий: *$carModel*')
-
-    return t.substitute({
-        'title': title,
-        'name': name,
-        'userCity': user.city,
-        'fullname': user.fullname,
-        'phone': user.phone,
-        'driverSeria': user.driverSeria,
-        'driverNumber': user.driverNumber,
-        'driverDate': user.driverDate,
-        'car': user.car,
-        'carModel': user.carModel
-    })
+def get_reg_data(user_id, title, name):
+    response = title + ', ' + name + '\n'
+    try:
+        for key, value in user_dict[user_id].items():
+            response = response + key + ': ' + value + '\n'
+        return response
+    except Exception:
+        print('Ой, какая-то ошибка.')
 
 
 # если прислали произвольное фото
