@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 import config
+import keyboard as kb
 import telebot
 from telebot import types
 from collections import defaultdict
@@ -20,11 +23,7 @@ def send_welcome(message):
     # key_no = types.InlineKeyboardButton(text='Нет', callback_data='no')
     # markup.add(key_yes, key_no)
 
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    order_btn = types.KeyboardButton(config.button_order)
-    info_btn = types.KeyboardButton(config.button_more)
-    contacts_btn = types.KeyboardButton(config.button_contact)
-    markup.add(order_btn, info_btn, contacts_btn)
+    markup = kb.one_line_kb(config.todo_step, False)
 
     bot.send_message(message.chat.id, config.welcome_message, reply_markup=markup)
 
@@ -32,11 +31,11 @@ def send_welcome(message):
 # бот отвечает на текстовые сообщения и кнопки types.KeyboardButton
 @bot.message_handler(content_types=['text'])
 def send_text(message):
-    if message.text == config.button_order:
+    if message.text == config.todo_step[0]:
         order_step(message)
-    elif message.text == config.button_more:
+    elif message.text == config.todo_step[1]:
         bot.send_message(message.chat.id, config.description_message)
-    elif message.text == config.button_contact:
+    elif message.text == config.todo_step[2]:
         bot.send_message(message.chat.id, config.contacts_message)
     else:
         bot.send_message(message.chat.id, config.dont_know_message)
@@ -53,6 +52,7 @@ def send_text(message):
 
 
 def order_step(message):
+    #TODO оптимизировать код
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
     small_btn = types.KeyboardButton(f'Маленькая - {config.small_price} грн')
     small_btn_thermo = types.KeyboardButton(f'Маленькая с термометром - {config.small_price_thermo} грн')
@@ -84,9 +84,7 @@ def process_fullname_step(message):
         chat_id = message.chat.id
         user_dict[chat_id]['ФИО'] = message.text
 
-        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-        button_phone = types.KeyboardButton(text="Отправить номер телефона", request_contact=True)
-        markup.add(button_phone)
+        markup = kb.contact_button(config.send_phone_number_button)
 
         msg = bot.send_message(chat_id, config.phone_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_phone_step)
@@ -105,7 +103,10 @@ def process_phone_step(message):
             # если телефон передали сообщением
             user_dict[chat_id]['Телефон'] = message.text
 
-        msg = bot.send_message(chat_id, config.city_message)
+        # удалить старую клавиатуру
+        markup = types.ReplyKeyboardRemove(selective=False)
+
+        msg = bot.send_message(chat_id, config.city_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_city_step)
     except Exception:
         error_message(message)
@@ -116,9 +117,7 @@ def process_city_step(message):
         chat_id = message.chat.id
         user_dict[chat_id]['Город, область'] = message.text
 
-        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-        for item in config.delivery_company:
-            markup.add(types.KeyboardButton(item))
+        markup = kb.one_line_kb(config.delivery_company)
 
         msg = bot.send_message(chat_id, config.choose_delivery_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_delivery_company_step)
@@ -132,9 +131,9 @@ def process_delivery_company_step(message):
         user_dict[chat_id]['Перевозчик'] = message.text
 
         # удалить старую клавиатуру
-        types.ReplyKeyboardRemove(selective=False)
+        markup = types.ReplyKeyboardRemove(selective=False)
 
-        msg = bot.send_message(chat_id, config.warehouse_number_message)
+        msg = bot.send_message(chat_id, config.warehouse_number_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_warehouse_step)
     except Exception:
         error_message(message)
@@ -145,10 +144,7 @@ def process_warehouse_step(message):
         chat_id = message.chat.id
         user_dict[chat_id]['Отделение'] = message.text
 
-        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-        nalozhka_btn = types.KeyboardButton('Наложенный платеж')
-        prepaid_btn = types.KeyboardButton('Предоплата на карту')
-        markup.add(nalozhka_btn, prepaid_btn)
+        markup = kb.one_line_kb(config.payment_method)
 
         msg = bot.send_message(chat_id, config.payment_method_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_payment_step)
@@ -162,9 +158,9 @@ def process_payment_step(message):
         user_dict[chat_id]['Оплата'] = message.text
 
         # удалить старую клавиатуру
-        types.ReplyKeyboardRemove(selective=False)
+        markup = types.ReplyKeyboardRemove(selective=False)
 
-        msg = bot.send_message(chat_id, config.comment_order_message)
+        msg = bot.send_message(chat_id, config.comment_order_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_comment_step)
     except Exception:
         error_message(message)
@@ -176,9 +172,9 @@ def process_comment_step(message):
         user_dict[chat_id]['Комментарий'] = message.text
 
         # удалить старую клавиатуру
-        types.ReplyKeyboardRemove(selective=False)
+        markup = types.ReplyKeyboardRemove(selective=False)
 
-        bot.send_message(chat_id, config.thanks_message)
+        bot.send_message(chat_id, config.thanks_message, reply_markup=markup)
         bot.send_message(chat_id, get_reg_data(chat_id, 'Ваша заявка', message.from_user.first_name))
         # отправить дубль в группу
         bot.send_message(config.forward_chat_id, get_reg_data(chat_id, 'Заявка от бота', bot.get_me().username))
@@ -193,7 +189,7 @@ def get_reg_data(user_id, title, name):
             response = response + key + ': ' + value + '\n'
         return response
     except Exception:
-        print('Ой, какая-то ошибка.')
+        print('Ой, неизвестная ошибка.')
 
 
 # если прислали произвольное фото
