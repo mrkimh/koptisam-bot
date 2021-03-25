@@ -3,9 +3,10 @@
 from telebot import types
 
 
-def one_line_kb(buttons, one_time_keyboard=True):
-    """динамические кнопки в одну строку"""
-    btns = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=one_time_keyboard).row(*buttons)
+def dynamic_kb(buttons, one_time_keyboard=True, row_width=2):
+    """динамические кнопки с настраиваемым кол-вом на строке и настраиваемым скрытием после клика"""
+    btns = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=one_time_keyboard, row_width=row_width)\
+        .add(*buttons)
     return btns
 
 

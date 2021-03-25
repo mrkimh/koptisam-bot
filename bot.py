@@ -23,7 +23,7 @@ def send_welcome(message):
     # key_no = types.InlineKeyboardButton(text='Нет', callback_data='no')
     # markup.add(key_yes, key_no)
 
-    markup = kb.one_line_kb(config.todo_step, False)
+    markup = kb.dynamic_kb(buttons=config.todo_step, one_time_keyboard=False, row_width=2)
 
     bot.send_message(message.chat.id, config.welcome_message, reply_markup=markup)
 
@@ -52,14 +52,8 @@ def send_text(message):
 
 
 def order_step(message):
-    #TODO оптимизировать код
-    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-    small_btn = types.KeyboardButton(f'Маленькая - {config.small_price} грн')
-    small_btn_thermo = types.KeyboardButton(f'Маленькая с термометром - {config.small_price_thermo} грн')
-    big_btn = types.KeyboardButton(f'Большая - {config.big_price} грн')
-    big_btn_thermo = types.KeyboardButton(f'Большая с термометром - {config.big_price_thermo} грн')
-    markup.add(small_btn, small_btn_thermo)
-    markup.add(big_btn, big_btn_thermo)
+
+    markup = kb.dynamic_kb(buttons=config.koptilni, row_width=1)
 
     msg = bot.send_message(message.chat.id, config.choose_goods_message, reply_markup=markup)
     bot.register_next_step_handler(msg, process_product_step)
@@ -117,7 +111,7 @@ def process_city_step(message):
         chat_id = message.chat.id
         user_dict[chat_id]['Город, область'] = message.text
 
-        markup = kb.one_line_kb(config.delivery_company)
+        markup = kb.dynamic_kb(buttons=config.delivery_company, row_width=2)
 
         msg = bot.send_message(chat_id, config.choose_delivery_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_delivery_company_step)
@@ -144,7 +138,7 @@ def process_warehouse_step(message):
         chat_id = message.chat.id
         user_dict[chat_id]['Отделение'] = message.text
 
-        markup = kb.one_line_kb(config.payment_method)
+        markup = kb.dynamic_kb(buttons=config.payment_method, row_width=2)
 
         msg = bot.send_message(chat_id, config.payment_method_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_payment_step)
@@ -178,6 +172,7 @@ def process_comment_step(message):
         bot.send_message(chat_id, get_reg_data(chat_id, 'Ваша заявка', message.from_user.first_name))
         # отправить дубль в группу
         bot.send_message(config.forward_chat_id, get_reg_data(chat_id, 'Заявка от бота', bot.get_me().username))
+        bot.send_message(message.chat.id, '/start')
     except Exception:
         error_message(message)
 
