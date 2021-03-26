@@ -23,7 +23,12 @@ def send_welcome(message):
     # key_no = types.InlineKeyboardButton(text='Нет', callback_data='no')
     # markup.add(key_yes, key_no)
 
-    markup = kb.dynamic_kb(buttons=config.todo_step, one_time_keyboard=False, row_width=2)
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    order_btn = types.KeyboardButton(config.button_order)
+    info_btn = types.KeyboardButton(config.button_more)
+    contacts_btn = types.KeyboardButton(config.button_contact)
+    markup.add(order_btn)
+    markup.add(info_btn, contacts_btn)
 
     bot.send_message(message.chat.id, config.welcome_message, reply_markup=markup)
 
@@ -31,15 +36,14 @@ def send_welcome(message):
 # бот отвечает на текстовые сообщения и кнопки types.KeyboardButton
 @bot.message_handler(content_types=['text'])
 def send_text(message):
-    if message.text == config.todo_step[0]:
-        order_step(message)
-    elif message.text == config.todo_step[1]:
+    if message.text == config.button_order:
+        choose_category_step(message)
+    elif message.text == config.button_more:
         bot.send_message(message.chat.id, config.description_message)
-    elif message.text == config.todo_step[2]:
+    elif message.text == config.button_contact:
         bot.send_message(message.chat.id, config.contacts_message)
     else:
         bot.send_message(message.chat.id, config.dont_know_message)
-
 
 # бот отвечает на инлайн кнопки types.InlineKeyboardButton
 # @bot.callback_query_handler(func=lambda call: True)
@@ -51,12 +55,30 @@ def send_text(message):
 #         bot.send_message(call.message.chat.id, 'нет')
 
 
-def order_step(message):
+def choose_category_step(message):
 
-    markup = kb.dynamic_kb(buttons=config.koptilni, row_width=1)
+    markup = kb.dynamic_kb(buttons=config.products.keys(), row_width=2)
 
-    msg = bot.send_message(message.chat.id, config.choose_goods_message, reply_markup=markup)
-    bot.register_next_step_handler(msg, process_product_step)
+    msg = bot.send_message(message.chat.id, config.choose_category_message, reply_markup=markup)
+    bot.register_next_step_handler(msg, process_category_step)
+
+
+def process_category_step(message):
+    try:
+        chat_id = message.chat.id
+        user_dict[chat_id]['Категория'] = message.text
+
+        items = config.products[message.text]
+        if len(items) > 0:
+            markup = kb.dynamic_kb(buttons=items, row_width=1)
+            # TODO сообщение бота сделать правильное в зависимости от категории
+            msg = bot.send_message(message.chat.id, config.choose_koptilni_message, reply_markup=markup)
+            bot.register_next_step_handler(msg, process_product_step)
+        else:
+            bot.send_message(message.chat.id, config.no_product_message)
+            choose_category_step(message)
+    except Exception:
+        error_message(message)
 
 
 def process_product_step(message):
@@ -78,7 +100,7 @@ def process_fullname_step(message):
         chat_id = message.chat.id
         user_dict[chat_id]['ФИО'] = message.text
 
-        markup = kb.contact_button(config.send_phone_number_button)
+        markup = kb.contact_button(config.button_send_phone_number)
 
         msg = bot.send_message(chat_id, config.phone_message, reply_markup=markup)
         bot.register_next_step_handler(msg, process_phone_step)
