@@ -68,11 +68,10 @@ def process_category_step(message):
         chat_id = message.chat.id
         user_dict[chat_id]['Категория'] = message.text
 
-        items = config.products[message.text]
+        items = config.products[message.text][config.PRODUCTS]
         if len(items) > 0:
             markup = kb.dynamic_kb(buttons=items, row_width=1)
-            # TODO сообщение бота сделать правильное в зависимости от категории
-            msg = bot.send_message(message.chat.id, config.choose_koptilni_message, reply_markup=markup)
+            msg = bot.send_message(message.chat.id, config.products[message.text][config.DESCRIPTION], reply_markup=markup)
             bot.register_next_step_handler(msg, process_product_step)
         else:
             bot.send_message(message.chat.id, config.no_product_message)
