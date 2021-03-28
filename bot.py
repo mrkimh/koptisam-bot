@@ -44,6 +44,7 @@ def send_text(message):
         bot.send_message(message.chat.id, config.contacts_message)
     else:
         bot.send_message(message.chat.id, config.dont_know_message)
+        bot.send_message(message.chat.id, '/start')
 
 # бот отвечает на инлайн кнопки types.InlineKeyboardButton
 # @bot.callback_query_handler(func=lambda call: True)
@@ -192,7 +193,7 @@ def process_comment_step(message):
         bot.send_message(chat_id, config.thanks_message, reply_markup=markup)
         bot.send_message(chat_id, get_reg_data(chat_id, 'Ваша заявка', message.from_user.first_name))
         # отправить дубль в группу
-        bot.send_message(config.forward_chat_id, get_reg_data(chat_id, 'Заявка от бота', bot.get_me().username))
+        bot.send_message(config.forward_group_id, get_reg_data(chat_id, 'Заявка от бота', bot.get_me().username))
         bot.send_message(message.chat.id, '/start')
     except Exception:
         error_message(message)

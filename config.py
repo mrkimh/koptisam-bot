@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 token = '1771718216:AAGYueOEfblixsy1832FjSa28IuVCQcrkl0'
-forward_chat_id = '381683968'
+forward_group_id = -1001469759769
 
 # цены на коптильни
 small_koptilnya_price = 1150
@@ -13,7 +13,7 @@ big_koptilnya_thermo_price = 1600
 #
 PRODUCTS = "Товары"
 DESCRIPTION = "Описание"
-# {"категория1": {"товары": [товар1, товар2], описание:""}}
+
 products = {
     'Коптильни': {
         PRODUCTS:
