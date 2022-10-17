@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-token = '1771718216:AAGYueOEfblixsy1832FjSa28IuVCQcrkl0'
+token = '5711490877:AAHCU5uKeFXREXZrFCZlNsUX_5UVBBH1XTQ'
 forward_group_id = -1001469759769
 
 # цены на коптильни
